@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panel Administrador — Hospital</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { min-height: 100vh; background: #f0f7f4; padding: 2rem; font-family: Arial, sans-serif; }
+
+        .barrasuperior {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            border: 1px solid #d4edda;
+        }
+        .barrasuperior h1 { color: #1a7a3c; font-size: 20px; font-weight: 600; }
+
+        .boton-salir {
+            background: transparent;
+            color: #1a7a3c;
+            border: 1.5px solid #1a7a3c;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .boton-salir:hover { background: #1a7a3c; color: white; }
+
+        .cuadricula {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .tarjeta {
+            background: white;
+            border: 1px solid #d4edda;
+            border-radius: 14px;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+            font-weight: 500;
+            transition: box-shadow 0.2s;
+            text-align: center;
+        }
+        .tarjeta:hover { box-shadow: 0 4px 12px rgba(26, 122, 60, 0.15); border-color: #1a7a3c; }
+
+        .circulo-icono {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .verde { background: #d5f0e0; }
+        .rojo { background: #fee2e2; }
+        .azul { background: #dbeafe; }
+        .ambar { background: #fef3c7; }
+        .rosa { background: #fce7f3; }
+
+        /* Modal */
+        .fondo-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .fondo-modal.activo { display: flex; }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 1.75rem;
+            width: 100%;
+            max-width: 420px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h3 { color: #1a7a3c; font-size: 17px; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #1a7a3c; }
+
+        .modal input,
+        .modal select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1.5px solid #d0d7de;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 0.6rem;
+            font-family: Arial, sans-serif;
+            color: #2c3e50;
+        }
+        .modal input:focus, .modal select:focus { border-color: #1a7a3c; }
+
+        .separador {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #888;
+            margin: 0.5rem 0 0.75rem;
+            padding-bottom: 4px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .botones-modal {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .boton-cancelar {
+            flex: 1;
+            padding: 9px;
+            background: white;
+            border: 1.5px solid #d0d7de;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #555;
+        }
+        .boton-cancelar:hover { background: #f4f6f8; }
+        .boton-aceptar {
+            flex: 1;
+            padding: 9px;
+            background: #1a7a3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .boton-aceptar:hover { background: #15612f; }
+
+        .lista-resultados { margin-top: 0.5rem; }
+
+        .elemento-lista {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.75rem;
+            border: 0.5px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 13px;
+        }
+        .boton-borrar {
+            background: #fee2e2;
+            color: #b91c1c;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .boton-borrar:hover { background: #fca5a5; }
+
+        .notificacion {
+            display: none;
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a7a3c;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 999;
+        }
+        .notificacion.visible { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="barrasuperior">
+        <h1>🏥 Panel de Administrador</h1>
+        <button class="boton-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+
+    <div class="cuadricula">
+        <div class="tarjeta" onclick="abrirModal('crear-doctor')">
+            <div class="circulo-icono verde">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" y1="8" x2="19" y2="14"/>
+                    <line x1="16" y1="11" x2="22" y2="11"/>
+                </svg>
+            </div>
+            <span>Crear Doctor</span>
+        </div>
+
+        <div class="tarjeta" onclick="abrirModal('borrar-doctor')">
+            <div class="circulo-icono rojo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="17" y1="11" x2="23" y2="17"/>
+                    <line x1="23" y1="11" x2="17" y2="17"/>
+                </svg>
+            </div>
+            <span>Borrar Doctor</span>
+        </div>
+
+        <div class="tarjeta" onclick="abrirModal('crear-paciente')">
+            <div class="circulo-icono azul">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="19" y1="8" x2="19" y2="14"/>
+                    <line x1="16" y1="11" x2="22" y2="11"/>
+                </svg>
+            </div>
+            <span>Crear Paciente</span>
+        </div>
+
+        <div class="tarjeta" onclick="abrirModal('borrar-paciente')">
+            <div class="circulo-icono rojo">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <line x1="17" y1="11" x2="23" y2="17"/>
+                    <line x1="23" y1="11" x2="17" y2="17"/>
+                </svg>
+            </div>
+            <span>Borrar Paciente</span>
+        </div>
+
+        <div class="tarjeta" onclick="abrirModal('crear-admin')">
+            <div class="circulo-icono ambar">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2" stroke-linecap="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <line x1="12" y1="8" x2="12" y2="14"/>
+                    <line x1="9" y1="11" x2="15" y2="11"/>
+                </svg>
+            </div>
+            <span>Crear Administrador</span>
+        </div>
+
+        <div class="tarjeta" onclick="abrirModal('borrar-admin')">
+            <div class="circulo-icono rosa">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#be185d" stroke-width="2" stroke-linecap="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                </svg>
+            </div>
+            <span>Borrar Administrador</span>
+        </div>
+    </div>
+
+    <!-- Modal: Crear Doctor -->
+    <div class="fondo-modal" id="modal-crear-doctor">
+        <div class="modal">
+            <h3>Crear Doctor</h3>
+            <div class="separador">Cuenta de acceso</div>
+            <input type="text" id="doc-usuario" placeholder="Nombre de usuario">
+            <input type="password" id="doc-contrasena" placeholder="Contraseña">
+            <div class="separador">Datos del doctor</div>
+            <input type="text" id="doc-nombre" placeholder="Nombre completo">
+            <input type="text" id="doc-especialidad" placeholder="Especialidad">
+            <input type="text" id="doc-telefono" placeholder="Teléfono">
+            <input type="text" id="doc-horario" placeholder="Horario (ej. Lun-Vie 8am-4pm)">
+            <div class="botones-modal">
+                <button class="boton-cancelar" onclick="cerrarModal('crear-doctor')">Cancelar</button>
+                <button class="boton-aceptar" onclick="crearDoctor()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Borrar Doctor -->
+    <div class="fondo-modal" id="modal-borrar-doctor">
+        <div class="modal">
+            <h3>Borrar Doctor</h3>
+            <div class="lista-resultados" id="lista-borrar-doctor"></div>
+            <div class="botones-modal" style="margin-top:1rem;">
+                <button class="boton-cancelar" onclick="cerrarModal('borrar-doctor')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear Paciente -->
+    <div class="fondo-modal" id="modal-crear-paciente">
+        <div class="modal">
+            <h3>Crear Paciente</h3>
+            <div class="separador">Cuenta de acceso</div>
+            <input type="text" id="pac-usuario" placeholder="Nombre de usuario">
+            <input type="password" id="pac-contrasena" placeholder="Contraseña">
+            <div class="separador">Datos del paciente</div>
+            <input type="text" id="pac-nombre" placeholder="Nombre completo">
+            <input type="number" id="pac-edad" placeholder="Edad">
+            <input type="text" id="pac-diagnostico" placeholder="Diagnóstico">
+            <select id="pac-doctor">
+                <option value="">Selecciona un doctor...</option>
+            </select>
+            <input type="text" id="pac-cita" placeholder="Cita médica (ej. 2026-05-10 10:00am)">
+            <div class="botones-modal">
+                <button class="boton-cancelar" onclick="cerrarModal('crear-paciente')">Cancelar</button>
+                <button class="boton-aceptar" onclick="crearPaciente()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Borrar Paciente -->
+    <div class="fondo-modal" id="modal-borrar-paciente">
+        <div class="modal">
+            <h3>Borrar Paciente</h3>
+            <div class="lista-resultados" id="lista-borrar-paciente"></div>
+            <div class="botones-modal" style="margin-top:1rem;">
+                <button class="boton-cancelar" onclick="cerrarModal('borrar-paciente')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Crear Administrador -->
+    <div class="fondo-modal" id="modal-crear-admin">
+        <div class="modal">
+            <h3>Crear Administrador</h3>
+            <input type="text" id="admin-usuario" placeholder="Nombre de usuario">
+            <input type="password" id="admin-contrasena" placeholder="Contraseña">
+            <div class="botones-modal">
+                <button class="boton-cancelar" onclick="cerrarModal('crear-admin')">Cancelar</button>
+                <button class="boton-aceptar" onclick="crearAdmin()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Borrar Administrador -->
+    <div class="fondo-modal" id="modal-borrar-admin">
+        <div class="modal">
+            <h3>Borrar Administrador</h3>
+            <div class="lista-resultados" id="lista-borrar-admin"></div>
+            <div class="botones-modal" style="margin-top:1rem;">
+                <button class="boton-cancelar" onclick="cerrarModal('borrar-admin')">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="notificacion" id="notificacion"></div>
+
+    <script>
+        function mostrarNotificacion(mensaje) {
+            const n = document.getElementById('notificacion');
+            n.textContent = mensaje;
+            n.classList.add('visible');
+            setTimeout(() => n.classList.remove('visible'), 3000);
+        }
+
+        function abrirModal(id) {
+            document.getElementById('modal-' + id).classList.add('activo');
+            if (id === 'borrar-doctor') cargarDoctoresParaBorrar();
+            if (id === 'borrar-paciente') cargarPacientesParaBorrar();
+            if (id === 'borrar-admin') cargarAdminsParaBorrar();
+            if (id === 'crear-paciente') cargarDoctoresSelector();
+        }
+
+        function cerrarModal(id) {
+            document.getElementById('modal-' + id).classList.remove('activo');
+        }
+
+        async function cerrarSesion() {
+            await fetch('/cerrar-sesion', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        async function crearDoctor() {
+            const cuerpo = new URLSearchParams({
+                nombreUsuario: document.getElementById('doc-usuario').value,
+                contrasena: document.getElementById('doc-contrasena').value,
+                nombre: document.getElementById('doc-nombre').value,
+                especialidad: document.getElementById('doc-especialidad').value,
+                telefono: document.getElementById('doc-telefono').value,
+                horario: document.getElementById('doc-horario').value
+            });
+            const respuesta = await fetch('/admin/crear-doctor', { method: 'POST', body: cuerpo });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+            cerrarModal('crear-doctor');
+        }
+
+        async function crearPaciente() {
+            const cuerpo = new URLSearchParams({
+                nombreUsuario: document.getElementById('pac-usuario').value,
+                contrasena: document.getElementById('pac-contrasena').value,
+                nombre: document.getElementById('pac-nombre').value,
+                edad: document.getElementById('pac-edad').value,
+                diagnostico: document.getElementById('pac-diagnostico').value,
+                doctor_asignado: document.getElementById('pac-doctor').value,
+                cita_medica: document.getElementById('pac-cita').value
+            });
+            const respuesta = await fetch('/admin/crear-paciente', { method: 'POST', body: cuerpo });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+            cerrarModal('crear-paciente');
+        }
+
+        async function crearAdmin() {
+            const cuerpo = new URLSearchParams({
+                nombreUsuario: document.getElementById('admin-usuario').value,
+                contrasena: document.getElementById('admin-contrasena').value
+            });
+            const respuesta = await fetch('/admin/agregar', { method: 'POST', body: cuerpo });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+            cerrarModal('crear-admin');
+        }
+
+        async function cargarDoctoresParaBorrar() {
+            const respuesta = await fetch('/admin/lista-doctores');
+            const datos = await respuesta.json();
+            const lista = document.getElementById('lista-borrar-doctor');
+            lista.innerHTML = datos.length === 0
+                ? '<p style="color:#888;font-size:13px;">No hay doctores registrados</p>'
+                : datos.map(d => `
+                    <div class="elemento-lista">
+                        <span><b>${d.nombre}</b> — ${d.especialidad}</span>
+                        <button class="boton-borrar" onclick="borrarDoctor(${d.id})">Borrar</button>
+                    </div>`).join('');
+        }
+
+        async function borrarDoctor(id) {
+            const respuesta = await fetch('/admin/borrar-doctor/' + id, { method: 'DELETE' });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+            cargarDoctoresParaBorrar();
+        }
+
+        async function cargarPacientesParaBorrar() {
+            const respuesta = await fetch('/admin/lista-pacientes');
+            const datos = await respuesta.json();
+            const lista = document.getElementById('lista-borrar-paciente');
+            lista.innerHTML = datos.length === 0
+                ? '<p style="color:#888;font-size:13px;">No hay pacientes registrados</p>'
+                : datos.map(p => `
+                    <div class="elemento-lista">
+                        <span><b>${p.nombre}</b> — ${p.edad} años</span>
+                        <button class="boton-borrar" onclick="borrarPaciente(${p.id})">Borrar</button>
+                    </div>`).join('');
+        }
+
+        async function borrarPaciente(id) {
+            const respuesta = await fetch('/admin/borrar-paciente/' + id, { method: 'DELETE' });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+            cargarPacientesParaBorrar();
+        }
+
+        async function cargarAdminsParaBorrar() {
+            const respuesta = await fetch('/admin/lista');
+            const datos = await respuesta.json();
+            const lista = document.getElementById('lista-borrar-admin');
+            lista.innerHTML = datos.length === 0
+                ? '<p style="color:#888;font-size:13px;">No hay administradores</p>'
+                : datos.map(a => `
+                    <div class="elemento-lista">
+                        <span><b>${a.nombreUsuario}</b></span>
+                        <button class="boton-borrar" onclick="borrarAdmin('${a.nombreUsuario}')">Borrar</button>
+                    </div>`).join('');
+        }
+
+        async function borrarAdmin(nombreUsuario) {
+            const respuesta = await fetch('/admin/borrar/' + encodeURIComponent(nombreUsuario), { method: 'DELETE' });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+            cargarAdminsParaBorrar();
+        }
+
+        async function cargarDoctoresSelector() {
+            const respuesta = await fetch('/admin/lista-doctores');
+            const datos = await respuesta.json();
+            const selector = document.getElementById('pac-doctor');
+            selector.innerHTML = '<option value="">Selecciona un doctor...</option>';
+            datos.forEach(d => {
+                const opcion = document.createElement('option');
+                opcion.value = d.nombreUsuario;
+                opcion.textContent = d.nombre + ' — ' + d.especialidad;
+                selector.appendChild(opcion);
+            });
+        }
+    </script>
+</body>
+</html>
