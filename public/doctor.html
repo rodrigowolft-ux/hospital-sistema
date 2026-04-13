@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panel Doctor — Hospital</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { min-height: 100vh; background: #f0f7f4; padding: 2rem; font-family: Arial, sans-serif; }
+
+        .barrasuperior {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            border: 1px solid #d4edda;
+        }
+        .barrasuperior h1 { color: #1a7a3c; font-size: 20px; font-weight: 600; }
+        .barrasuperior span { color: #7f8c8d; font-size: 14px; }
+
+        .boton-salir {
+            background: transparent;
+            color: #1a7a3c;
+            border: 1.5px solid #1a7a3c;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .boton-salir:hover { background: #1a7a3c; color: white; }
+
+        .seccion {
+            background: white;
+            border: 1px solid #d4edda;
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .seccion h2 {
+            font-size: 16px;
+            color: #1a7a3c;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #1a7a3c;
+        }
+
+        .tarjeta-info {
+            background: #f0f7f4;
+            border: 0.5px solid #d4edda;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .tarjeta-info .nombre { font-size: 15px; font-weight: 600; color: #1a7a3c; margin-bottom: 4px; }
+        .tarjeta-info .detalle { font-size: 13px; color: #7f8c8d; line-height: 1.7; }
+
+        .vacio { font-size: 13px; color: #aab4be; text-align: center; padding: 1.5rem 0; }
+
+        .campo { margin-bottom: 0.75rem; }
+        .campo label { display: block; font-size: 13px; color: #2c3e50; margin-bottom: 4px; }
+        .campo input,
+        .campo select,
+        .campo textarea {
+            width: 100%;
+            padding: 9px 12px;
+            background: white;
+            border: 1.5px solid #d4edda;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            color: #2c3e50;
+            font-family: Arial, sans-serif;
+        }
+        .campo input:focus,
+        .campo select:focus,
+        .campo textarea:focus { border-color: #1a7a3c; }
+        .campo input::placeholder,
+        .campo textarea::placeholder { color: #aab4be; }
+
+        .boton-principal {
+            width: 100%;
+            padding: 11px;
+            background: #1a7a3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .boton-principal:hover { background: #15612f; }
+
+        .notificacion {
+            display: none;
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a7a3c;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 99;
+        }
+        .notificacion.visible { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="barrasuperior">
+        <div>
+            <h1>🩺 Panel del Doctor</h1>
+            <span id="bienvenida">Cargando...</span>
+        </div>
+        <button class="boton-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+
+    <div class="seccion">
+        <h2>👥 Mis pacientes</h2>
+        <div id="lista-pacientes"><div class="vacio">Cargando...</div></div>
+    </div>
+
+    <div class="seccion">
+        <h2>📅 Mis citas programadas</h2>
+        <div id="lista-citas"><div class="vacio">Cargando...</div></div>
+    </div>
+
+    <div class="seccion">
+        <h2>➕ Crear cita para paciente</h2>
+        <div class="campo">
+            <label>Paciente</label>
+            <select id="cita-paciente">
+                <option value="">Selecciona un paciente...</option>
+            </select>
+        </div>
+        <div class="campo">
+            <label>Fecha y hora</label>
+            <input type="datetime-local" id="cita-fecha">
+        </div>
+        <div class="campo">
+            <label>Diagnóstico o motivo</label>
+            <textarea id="cita-diagnostico" rows="3" placeholder="Escribe el diagnóstico o motivo de la cita..."></textarea>
+        </div>
+        <button class="boton-principal" onclick="crearCita()">Guardar cita</button>
+    </div>
+
+    <div class="notificacion" id="notificacion"></div>
+
+    <script>
+        let nombreDoctor = '';
+
+        function mostrarNotificacion(mensaje) {
+            const n = document.getElementById('notificacion');
+            n.textContent = mensaje;
+            n.classList.add('visible');
+            setTimeout(() => n.classList.remove('visible'), 3000);
+        }
+
+        async function cerrarSesion() {
+            await fetch('/cerrar-sesion', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        async function cargarSesion() {
+            const respuesta = await fetch('/sesion');
+            if (!respuesta.ok) { window.location.href = '/'; return; }
+            const datos = await respuesta.json();
+            nombreDoctor = datos.nombreUsuario;
+            document.getElementById('bienvenida').textContent = 'Dr. ' + nombreDoctor;
+        }
+
+        async function cargarMisPacientes() {
+            const respuesta = await fetch('/doctor/mis-pacientes');
+            const datos = await respuesta.json();
+            const lista = document.getElementById('lista-pacientes');
+            const selector = document.getElementById('cita-paciente');
+
+            if (!datos.length) {
+                lista.innerHTML = '<div class="vacio">No tienes pacientes asignados.</div>';
+                return;
+            }
+
+            lista.innerHTML = datos.map(p => `
+                <div class="tarjeta-info">
+                    <div class="nombre">${p.nombre}</div>
+                    <div class="detalle">
+                        🎂 Edad: ${p.edad || '—'}<br>
+                        📋 Diagnóstico: ${p.diagnostico || '—'}
+                    </div>
+                </div>
+            `).join('');
+
+            selector.innerHTML = '<option value="">Selecciona un paciente...</option>';
+            datos.forEach(p => {
+                const opcion = document.createElement('option');
+                opcion.value = p.id_usuario;
+                opcion.textContent = p.nombre;
+                selector.appendChild(opcion);
+            });
+        }
+
+        async function cargarMisCitas() {
+            const respuesta = await fetch('/doctor/mis-citas');
+            const datos = await respuesta.json();
+            const lista = document.getElementById('lista-citas');
+
+            if (!datos.length) {
+                lista.innerHTML = '<div class="vacio">No tienes citas programadas.</div>';
+                return;
+            }
+
+            lista.innerHTML = datos.map(c => `
+                <div class="tarjeta-info">
+                    <div class="nombre">${c.nombre}</div>
+                    <div class="detalle">
+                        📅 Fecha: ${c.cita_medica || '—'}<br>
+                        📋 Diagnóstico: ${c.diagnostico || '—'}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function crearCita() {
+            const idPaciente = document.getElementById('cita-paciente').value;
+            const fecha = document.getElementById('cita-fecha').value;
+            const diagnostico = document.getElementById('cita-diagnostico').value;
+
+            if (!idPaciente || !fecha || !diagnostico) {
+                mostrarNotificacion('Completa todos los campos');
+                return;
+            }
+
+            const cuerpo = new URLSearchParams({
+                id_usuario_paciente: idPaciente,
+                cita_medica: fecha,
+                diagnostico: diagnostico
+            });
+
+            const respuesta = await fetch('/doctor/crear-cita', { method: 'POST', body: cuerpo });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+
+            document.getElementById('cita-paciente').selectedIndex = 0;
+            document.getElementById('cita-fecha').value = '';
+            document.getElementById('cita-diagnostico').value = '';
+            cargarMisCitas();
+        }
+
+        async function iniciar() {
+            await cargarSesion();
+            cargarMisPacientes();
+            cargarMisCitas();
+        }
+
+        iniciar();
+    </script>
+</body>
+</html>
