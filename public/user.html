@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mi Panel — Hospital</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { min-height: 100vh; background: #f0f7f4; padding: 2rem; font-family: Arial, sans-serif; }
+
+        .barrasuperior {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            border: 1px solid #d4edda;
+        }
+        .barrasuperior h1 { color: #1a7a3c; font-size: 20px; font-weight: 600; }
+        .barrasuperior span { color: #7f8c8d; font-size: 14px; }
+
+        .boton-salir {
+            background: transparent;
+            color: #1a7a3c;
+            border: 1.5px solid #1a7a3c;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .boton-salir:hover { background: #1a7a3c; color: white; }
+
+        .seccion {
+            background: white;
+            border: 1px solid #d4edda;
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .seccion h2 {
+            font-size: 16px;
+            color: #1a7a3c;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #1a7a3c;
+        }
+
+        .tarjeta-cita {
+            background: #f0f7f4;
+            border: 0.5px solid #d4edda;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        .tarjeta-cita .doctor { font-size: 15px; font-weight: 600; color: #1a7a3c; margin-bottom: 4px; }
+        .tarjeta-cita .detalle { font-size: 13px; color: #7f8c8d; line-height: 1.6; }
+
+        .etiqueta {
+            display: inline-block;
+            font-size: 11px;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-top: 6px;
+            font-weight: 600;
+        }
+        .etiqueta-pendiente { background: #fef9e7; color: #b7770d; }
+        .etiqueta-confirmada { background: #d5f0e0; color: #1a7a3c; }
+
+        .vacio { font-size: 13px; color: #aab4be; text-align: center; padding: 1.5rem 0; }
+
+        .campo { margin-bottom: 0.75rem; }
+        .campo label { display: block; font-size: 13px; color: #2c3e50; margin-bottom: 4px; }
+        .campo input,
+        .campo select,
+        .campo textarea {
+            width: 100%;
+            padding: 9px 12px;
+            background: white;
+            border: 1.5px solid #d4edda;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            color: #2c3e50;
+            font-family: Arial, sans-serif;
+        }
+        .campo input:focus,
+        .campo select:focus,
+        .campo textarea:focus { border-color: #1a7a3c; }
+        .campo input::placeholder,
+        .campo textarea::placeholder { color: #aab4be; }
+
+        .boton-principal {
+            width: 100%;
+            padding: 11px;
+            background: #1a7a3c;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .boton-principal:hover { background: #15612f; }
+
+        .notificacion {
+            display: none;
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a7a3c;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 99;
+        }
+        .notificacion.visible { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="barrasuperior">
+        <div>
+            <h1>🏥 Mi Panel</h1>
+            <span id="bienvenida">Cargando...</span>
+        </div>
+        <button class="boton-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+    </div>
+
+    <!-- Cita asignada por el doctor -->
+    <div class="seccion">
+        <h2>📅 Mi cita asignada</h2>
+        <div id="mi-cita"><div class="vacio">Cargando...</div></div>
+    </div>
+
+    <!-- Solicitar una nueva cita -->
+    <div class="seccion">
+        <h2>➕ Solicitar nueva cita</h2>
+
+        <div class="campo">
+            <label>Doctor</label>
+            <select id="sol-doctor">
+                <option value="">Selecciona un doctor...</option>
+            </select>
+        </div>
+
+        <div class="campo">
+            <label>Fecha y hora deseada</label>
+            <input type="datetime-local" id="sol-fecha">
+        </div>
+
+        <div class="campo">
+            <label>Motivo de la consulta</label>
+            <textarea id="sol-motivo" rows="3" placeholder="Describe brevemente tu motivo..."></textarea>
+        </div>
+
+        <button class="boton-principal" onclick="solicitarCita()">Enviar solicitud</button>
+    </div>
+
+    <!-- Historial de solicitudes enviadas -->
+    <div class="seccion">
+        <h2>📋 Mis solicitudes enviadas</h2>
+        <div id="lista-solicitudes"><div class="vacio">Cargando...</div></div>
+    </div>
+
+    <div class="notificacion" id="notificacion"></div>
+
+    <script>
+        function mostrarNotificacion(mensaje) {
+            const n = document.getElementById('notificacion');
+            n.textContent = mensaje;
+            n.classList.add('visible');
+            setTimeout(() => n.classList.remove('visible'), 3000);
+        }
+
+        async function cerrarSesion() {
+            await fetch('/cerrar-sesion', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        async function cargarSesion() {
+            const respuesta = await fetch('/sesion');
+            if (!respuesta.ok) { window.location.href = '/'; return; }
+            const datos = await respuesta.json();
+            document.getElementById('bienvenida').textContent = 'Bienvenido, ' + datos.nombreUsuario;
+        }
+
+        async function cargarMiCita() {
+            const respuesta = await fetch('/mis-citas');
+            const datos = await respuesta.json();
+            const contenedor = document.getElementById('mi-cita');
+
+            if (!datos || !datos.cita_medica) {
+                contenedor.innerHTML = '<div class="vacio">No tienes cita asignada aún.</div>';
+                return;
+            }
+
+            contenedor.innerHTML = `
+                <div class="tarjeta-cita">
+                    <div class="doctor">Dr. ${datos.doctor_asignado || '—'}</div>
+                    <div class="detalle">
+                        📋 Diagnóstico: ${datos.diagnostico || '—'}<br>
+                        📅 Fecha y hora: ${datos.cita_medica || '—'}
+                    </div>
+                </div>
+            `;
+        }
+
+        /* Carga doctores — guarda el nombre completo como value para que coincida
+           con doctor_asignado en la tabla datos_paciente */
+        async function cargarDoctores() {
+            const respuesta = await fetch('/doctores');
+            const datos = await respuesta.json();
+            const selector = document.getElementById('sol-doctor');
+            selector.innerHTML = '<option value="">Selecciona un doctor...</option>';
+            datos.forEach(d => {
+                const opcion = document.createElement('option');
+                opcion.value = d.nombre;
+                opcion.textContent = d.nombre + (d.especialidad ? ' — ' + d.especialidad : '');
+                selector.appendChild(opcion);
+            });
+        }
+
+        async function cargarMisSolicitudes() {
+            const respuesta = await fetch('/mis-solicitudes');
+            const datos = await respuesta.json();
+            const lista = document.getElementById('lista-solicitudes');
+
+            if (!datos.length) {
+                lista.innerHTML = '<div class="vacio">No has enviado solicitudes aún.</div>';
+                return;
+            }
+
+            lista.innerHTML = datos.map(s => `
+                <div class="tarjeta-cita">
+                    <div class="doctor">${s.doctor_solicitado}</div>
+                    <div class="detalle">
+                        📅 Fecha solicitada: ${s.fecha_solicitada || '—'}<br>
+                        📝 Motivo: ${s.motivo || '—'}
+                    </div>
+                    <span class="etiqueta etiqueta-${s.estado}">${s.estado}</span>
+                </div>
+            `).join('');
+        }
+
+        async function solicitarCita() {
+            const doctor = document.getElementById('sol-doctor').value;
+            const fecha = document.getElementById('sol-fecha').value;
+            const motivo = document.getElementById('sol-motivo').value;
+
+            if (!doctor || !fecha || !motivo) {
+                mostrarNotificacion('Completa todos los campos');
+                return;
+            }
+
+            const cuerpo = new URLSearchParams({
+                doctor_solicitado: doctor,
+                fecha_solicitada: fecha,
+                motivo: motivo
+            });
+
+            const respuesta = await fetch('/solicitar-cita', { method: 'POST', body: cuerpo });
+            const datos = await respuesta.json();
+            mostrarNotificacion(datos.mensaje || datos.error);
+
+            document.getElementById('sol-doctor').selectedIndex = 0;
+            document.getElementById('sol-fecha').value = '';
+            document.getElementById('sol-motivo').value = '';
+            cargarMisSolicitudes();
+        }
+
+        async function iniciar() {
+            await cargarSesion();
+            cargarMiCita();
+            cargarDoctores();
+            cargarMisSolicitudes();
+        }
+
+        iniciar();
+    </script>
+</body>
+</html>
